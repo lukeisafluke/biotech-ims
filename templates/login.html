@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - BioTrack IMS Portal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 50%, #415a77 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .login-card {
+            max-width: 420px;
+            width: 100%;
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            background: #ffffff;
+        }
+        .login-header {
+            background: #111827;
+            padding: 2.2rem 2rem 1.8rem;
+            text-align: center;
+            color: #ffffff;
+            border-bottom: 3px solid #0d6efd;
+        }
+        .brand-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(13, 110, 253, 0.15);
+            color: #0d6efd;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            border: 2px solid rgba(13, 110, 253, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container p-3">
+    <div class="login-card mx-auto">
+        <div class="login-header">
+            <div class="brand-icon">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <h4 class="fw-bold mb-1">BioTrack IMS</h4>
+            <p class="text-white-50 small mb-0">Warehouse & Order Management System</p>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show py-2 small shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('login', next=request.args.get('next', '')) }}">
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small">System Access Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="bi bi-key-fill"></i></span>
+                        <input type="password" name="password" id="loginPasswordInput" class="form-control" placeholder="Enter local password" required autofocus autocomplete="current-password">
+                        <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility()" title="Show/Hide Password">
+                            <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                    <div class="form-text small text-muted">
+                        Enter the local administrator or operator password to access the portal.
+                    </div>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-primary fw-bold py-2 shadow-sm">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Access System
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-footer bg-light border-0 py-3 text-center">
+            <small class="text-muted"><i class="bi bi-lock me-1"></i> Local secure intranet connection</small>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function togglePasswordVisibility() {
+    const input = document.getElementById('loginPasswordInput');
+    const icon = document.getElementById('togglePasswordIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+</script>
+</body>
+</html>
+

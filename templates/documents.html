@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents & Backups - BioTrack IMS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .folder-card {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            background: #ffffff;
+            transition: box-shadow 0.2s ease;
+        }
+        .folder-card:hover {
+            box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.06);
+        }
+        .folder-header {
+            padding: 0.75rem 1.25rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .folder-header:hover {
+            background: #f1f3f5;
+        }
+        .folder-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .folder-icon {
+            font-size: 1.35rem;
+            color: #f59f00;
+        }
+        .highlight-row {
+            background-color: #fff3cd !important;
+            animation: pulseHighlight 2.5s ease-in-out infinite alternate;
+            border-left: 4px solid #ffc107 !important;
+        }
+        @keyframes pulseHighlight {
+            from { background-color: #fff3cd; }
+            to { background-color: #ffe69c; }
+        }
+        .file-icon {
+            font-size: 1.2rem;
+            color: #198754;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<!-- NAVIGATION BAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/">
+            <i class="bi bi-shield-check text-primary me-2"></i>BioTrack IMS
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/warehouse">
+                        <i class="bi bi-box-seam me-1"></i> Warehouse
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active fw-bold" href="/documents">
+                        <i class="bi bi-folder2-open me-1"></i> Documents
+                    </a>
+                </li>
+            </ul>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-info btn-sm fw-semibold" onclick="openBackupModal()">
+                    <i class="bi bi-hdd-network me-1"></i> Backup & Sync
+                </button>
+                <a href="/logout" class="btn btn-outline-danger btn-sm fw-semibold ms-1" title="Sign out of system">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-2">
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'message' else 'success' }} alert-dismissible fade show shadow-sm mb-4" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Top Info / Highlight Notification -->
+    {% if highlight %}
+    <div class="alert alert-warning alert-dismissible fade show shadow-sm mb-4 border-warning" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill text-success fs-4 me-3"></i>
+            <div>
+                <strong>Generated Document Ready:</strong> <code>{{ highlight }}</code> has been saved to the server and highlighted below.
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Overview Metrics Header -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-bold">Active Folders</div>
+                    <div class="fs-3 fw-bold text-dark">{{ total_folders }}</div>
+                    <div class="text-muted small">Grouped by Order & Linked Quote</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 border-start border-success border-4">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-bold">Total Documents</div>
+                    <div class="fs-3 fw-bold text-dark">{{ total_docs }}</div>
+                    <div class="text-muted small">Invoices, quotes, slips, labels</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 border-start border-info border-4">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-bold">Server Storage</div>
+                    <div class="fs-3 fw-bold text-info">{{ total_size_mb }}</div>
+                    <div class="text-muted small">Inside <code>generated_docs/</code></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 border-start border-dark border-4">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase fw-bold">External Drive Backup</div>
+                    <button type="button" class="btn btn-outline-dark btn-sm fw-bold mt-1 w-100" onclick="openBackupModal()">
+                        <i class="bi bi-hdd-network me-1"></i> Sync Server to Drive
+                    </button>
+                    <div class="text-muted small mt-1">Snapshot DB & docs</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar: Search & View Controls -->
+    <div class="card shadow-sm mb-4 border">
+        <div class="card-body p-3 bg-white">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                        <input type="text" id="docSearchInput" class="form-control" placeholder="Search by order #, quote #, invoice #, customer, filename..." oninput="filterExplorer()">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary active btn-sm fw-semibold" id="viewModeFolderBtn" onclick="setViewMode('folder')">
+                            <i class="bi bi-folder-symlink me-1"></i> Folder Explorer
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm fw-semibold" id="viewModeFlatBtn" onclick="setViewMode('flat')">
+                            <i class="bi bi-list-ul me-1"></i> Flat List
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="expandAllFolders()" title="Expand All">
+                            <i class="bi bi-arrows-expand me-1"></i> Expand
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="collapseAllFolders()" title="Collapse All">
+                            <i class="bi bi-arrows-collapse me-1"></i> Collapse
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2 text-end">
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="resetDocFilters()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: FILE SYSTEM / FOLDER EXPLORER VIEW (DEFAULT) -->
+    <!-- ========================================================================= -->
+    <div id="folderExplorerContainer">
+        {% for fld in folders %}
+        <div class="folder-card shadow-sm" id="folderCard-{{ fld.folder_key }}"
+             data-folder-key="{{ fld.folder_key|lower }}"
+             data-folder-title="{{ fld.folder_title|lower }}"
+             data-customer="{{ fld.customer_name|lower }}"
+             data-inv="{{ (fld.invoice_number or '')|lower }}">
+            
+            <div class="folder-header" onclick="toggleFolder('{{ fld.folder_key }}')">
+                <div class="folder-title">
+                    <i class="bi bi-folder2-open folder-icon" id="folderIcon-{{ fld.folder_key }}"></i>
+                    <div>
+                        <span class="text-dark">{{ fld.folder_title }}</span>
+                        {% if fld.is_converted %}
+                            <span class="badge bg-success-subtle text-success border ms-1 small"><i class="bi bi-link-45deg me-1"></i>Quote Converted</span>
+                        {% endif %}
+                        {% if fld.invoice_number %}
+                            <span class="badge bg-light text-dark border ms-1 small">Inv: {{ fld.invoice_number }}</span>
+                        {% endif %}
+                        <div class="text-muted small fw-normal">
+                            <i class="bi bi-person me-1"></i>{{ fld.customer_name }} &bull; Path: <code>generated_docs/{{ fld.folder_key }}/</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary rounded-pill">{{ fld.file_count }} document(s)</span>
+                    <span class="text-muted small">{{ fld.total_size_kb }}</span>
+                    <span class="text-muted small d-none d-md-inline">{{ fld.modified_str }}</span>
+                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 ms-2"
+                            onclick="event.stopPropagation(); promptDeleteFolder('{{ fld.folder_key }}', '{{ fld.folder_title|escape }}', {{ fld.file_count }})"
+                            title="Delete entire folder and its files">
+                        <i class="bi bi-trash me-1"></i>Delete Folder
+                    </button>
+                    <i class="bi bi-chevron-down text-muted ms-1" id="folderChevron-{{ fld.folder_key }}"></i>
+                </div>
+            </div>
+
+            <!-- Folder Contents Table -->
+            <div class="folder-content" id="folderContent-{{ fld.folder_key }}">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 35%;">File Name</th>
+                                <th style="width: 18%;">Document Type</th>
+                                <th style="width: 15%;">File Size</th>
+                                <th style="width: 20%;">Generated Date</th>
+                                <th style="width: 12%;" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in fld.files %}
+                            <tr class="fld-file-row {% if highlight and doc.filename == highlight %}highlight-row{% endif %}"
+                                data-filename="{{ doc.filename|lower }}"
+                                data-type="{{ doc.doc_type }}"
+                                id="row-{{ doc.filename }}">
+                                <td>
+                                    <i class="bi bi-file-earmark-excel-fill file-icon me-2 align-middle"></i>
+                                    <a href="{{ url_for('documents_download', filepath=doc.filepath) }}" class="fw-bold text-decoration-none text-dark">
+                                        {{ doc.filename }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge {{ doc.badge_class }}">{{ doc.doc_type }}</span>
+                                </td>
+                                <td><span class="text-muted">{{ doc.size_kb }}</span></td>
+                                <td><span class="text-muted">{{ doc.modified_str }}</span></td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('documents_download', filepath=doc.filepath) }}" class="btn btn-outline-primary btn-sm" title="Download Spreadsheet">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="promptDeleteDoc('{{ doc.filepath }}', '{{ doc.filename }}')" title="Delete from Server">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card p-5 text-center text-muted">
+            <i class="bi bi-folder-x fs-1 mb-2"></i>
+            <h5>No documents generated yet</h5>
+            <p class="small mb-0">Documents generated for quotes and orders will appear here organized in their respective folders.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: FLAT LIST VIEW (ALTERNATIVE) -->
+    <!-- ========================================================================= -->
+    <div id="flatTableContainer" style="display: none;">
+        <div class="card shadow-sm border mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>All Files in <code>generated_docs</code></h6>
+                <span class="badge bg-secondary">{{ total_docs }} total files</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="flatTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 25%;">File Name</th>
+                                <th style="width: 14%;">Document Type</th>
+                                <th style="width: 20%;">Associated Folder / Entity</th>
+                                <th style="width: 16%;">Customer</th>
+                                <th style="width: 8%;">Size</th>
+                                <th style="width: 10%;">Date</th>
+                                <th style="width: 7%;" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="flatTableBody">
+                            {% for doc in documents %}
+                            <tr class="flat-doc-row {% if highlight and doc.filename == highlight %}highlight-row{% endif %}"
+                                data-filename="{{ doc.filename|lower }}"
+                                data-type="{{ doc.doc_type }}"
+                                data-entity="{{ doc.entity_label|lower }}"
+                                data-customer="{{ doc.customer_name|lower }}"
+                                data-folder="{{ doc.folder|lower }}">
+                                <td>
+                                    <i class="bi bi-file-earmark-excel-fill text-success me-1 fs-5 align-middle"></i>
+                                    <strong><code>{{ doc.filename }}</code></strong>
+                                    <div class="text-muted small">Folder: <code>{{ doc.folder }}/</code></div>
+                                </td>
+                                <td>
+                                    <span class="badge {{ doc.badge_class }}">{{ doc.doc_type }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ doc.entity_label }}</strong>
+                                    {% if doc.invoice_number %}
+                                        <div class="text-muted small">Inv: {{ doc.invoice_number }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">{{ doc.customer_name }}</div>
+                                </td>
+                                <td><span class="text-muted small">{{ doc.size_kb }}</span></td>
+                                <td><span class="text-muted small">{{ doc.modified_str }}</span></td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('documents_download', filepath=doc.filepath) }}" class="btn btn-outline-primary btn-sm" title="Download Document">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="promptDeleteDoc('{{ doc.filepath }}', '{{ doc.filename }}')" title="Delete from Server">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- MODAL: EXTERNAL HARD DRIVE BACKUP & SYNCHRONIZATION -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="backupModal" tabindex="-1" aria-labelledby="backupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="backupModalLabel">
+                    <i class="bi bi-hdd-network me-2 text-info"></i>Server & External Hard Drive Backup
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    Synchronize the PostgreSQL database and all generated documents to a connected external hard drive or designated directory.
+                </p>
+
+                <!-- Drives Status Card -->
+                <div class="card bg-light border mb-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold small text-uppercase text-muted"><i class="bi bi-usb-drive me-1"></i>Connected Drives Detection</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="checkBackupDrives()">
+                                <i class="bi bi-arrow-repeat me-1"></i>Refresh Drives
+                            </button>
+                        </div>
+                        <div id="backupDrivesList">
+                            <span class="text-muted small"><i class="bi bi-hourglass-split me-1"></i>Scanning connected storage devices...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Backup Destination -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Backup Destination Path</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-folder-fill text-warning"></i></span>
+                        <input type="text" id="backupTargetPathInput" class="form-control" placeholder="e.g. E:\Backups or D:\Backups">
+                    </div>
+                    <div class="form-text small">
+                        Full timestamped database dumps and incremental document archives will be saved to this folder.
+                    </div>
+                </div>
+
+                <!-- Last Backup Stats -->
+                <div class="alert alert-info border small py-2 mb-3" id="lastBackupAlert">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <span id="lastBackupText">No prior backups recorded in this session.</span>
+                </div>
+
+                <!-- Backup Progress / Result -->
+                <div id="backupProgressBlock" class="text-center py-3 d-none">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <div class="fw-bold text-dark">Performing Server Backup & Synchronization...</div>
+                    <small class="text-muted">Exporting PostgreSQL database and synchronizing document files...</small>
+                </div>
+
+                <div id="backupResultAlert" class="alert alert-success d-none mb-0">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Backup Completed Successfully!</h6>
+                    <div class="small" id="backupResultDetails"></div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary fw-bold" id="startBackupBtn" onclick="runBackupSync()">
+                    <i class="bi bi-cloud-arrow-up me-1"></i>Start Sync & Backup Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE DOCUMENT CONFIRMATION MODAL -->
+<div class="modal fade" id="deleteDocModal" tabindex="-1" aria-labelledby="deleteDocModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content shadow">
+            <form action="{{ url_for('documents_delete') }}" method="POST">
+                <input type="hidden" name="filepath" id="deleteDocFilePath">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteDocModalLabel"><i class="bi bi-trash me-2"></i>Delete Document</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this file from the local server?</p>
+                    <p><strong id="deleteDocFileNameDisplay" class="text-danger"></strong></p>
+                    <p class="text-muted small mb-0">This operation cannot be undone. You can regenerate the file from the Dashboard if needed.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold">Delete File</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE ENTIRE FOLDER CONFIRMATION MODAL -->
+<div class="modal fade" id="deleteFolderModal" tabindex="-1" aria-labelledby="deleteFolderModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content shadow">
+            <form action="{{ url_for('documents_delete_folder') }}" method="POST">
+                <input type="hidden" name="folder_key" id="deleteFolderKeyInput">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteFolderModalLabel"><i class="bi bi-folder-x me-2"></i>Delete Entire Folder</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this entire folder and all of its files from the server?</p>
+                    <div class="alert alert-warning py-2 mb-3">
+                        <div class="fw-bold text-dark" id="deleteFolderTitleDisplay"></div>
+                        <div class="small text-muted" id="deleteFolderDetailsDisplay"></div>
+                    </div>
+                    <p class="text-danger small mb-0 fw-semibold">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Warning: All spreadsheets inside this folder will be permanently removed.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold">Delete Entire Folder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// =========================================================================
+// VIEW TOGGLE & FOLDER CONTROLS
+// =========================================================================
+function setViewMode(mode) {
+    const fContainer = document.getElementById('folderExplorerContainer');
+    const tContainer = document.getElementById('flatTableContainer');
+    const fBtn = document.getElementById('viewModeFolderBtn');
+    const tBtn = document.getElementById('viewModeFlatBtn');
+
+    if (mode === 'folder') {
+        fContainer.style.display = 'block';
+        tContainer.style.display = 'none';
+        fBtn.classList.add('active');
+        tBtn.classList.remove('active');
+    } else {
+        fContainer.style.display = 'none';
+        tContainer.style.display = 'block';
+        tBtn.classList.add('active');
+        fBtn.classList.remove('active');
+    }
+}
+
+function toggleFolder(key) {
+    const content = document.getElementById('folderContent-' + key);
+    const chevron = document.getElementById('folderChevron-' + key);
+    const icon = document.getElementById('folderIcon-' + key);
+
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        if (chevron) chevron.className = 'bi bi-chevron-up text-muted';
+        if (icon) icon.className = 'bi bi-folder2-open folder-icon';
+    } else {
+        content.style.display = 'none';
+        if (chevron) chevron.className = 'bi bi-chevron-down text-muted';
+        if (icon) icon.className = 'bi bi-folder2 folder-icon';
+    }
+}
+
+function expandAllFolders() {
+    document.querySelectorAll('.folder-content').forEach(c => c.style.display = 'block');
+    document.querySelectorAll('[id^="folderChevron-"]').forEach(i => i.className = 'bi bi-chevron-up text-muted');
+    document.querySelectorAll('[id^="folderIcon-"]').forEach(i => i.className = 'bi bi-folder2-open folder-icon');
+}
+
+function collapseAllFolders() {
+    document.querySelectorAll('.folder-content').forEach(c => c.style.display = 'none');
+    document.querySelectorAll('[id^="folderChevron-"]').forEach(i => i.className = 'bi bi-chevron-down text-muted');
+    document.querySelectorAll('[id^="folderIcon-"]').forEach(i => i.className = 'bi bi-folder2 folder-icon');
+}
+
+// =========================================================================
+// SEARCH & FILTER
+// =========================================================================
+function filterExplorer() {
+    const q = document.getElementById('docSearchInput').value.toLowerCase().trim();
+
+    // 1. Filter folder cards
+    const folderCards = document.querySelectorAll('.folder-card');
+    folderCards.forEach(card => {
+        const title = card.getAttribute('data-folder-title') || '';
+        const cust = card.getAttribute('data-customer') || '';
+        const inv = card.getAttribute('data-inv') || '';
+        const fileRows = card.querySelectorAll('.fld-file-row');
+
+        let matchedAnyFile = false;
+        fileRows.forEach(row => {
+            const fname = row.getAttribute('data-filename') || '';
+            const dtype = (row.getAttribute('data-type') || '').toLowerCase();
+            const fileMatches = !q || fname.includes(q) || dtype.includes(q);
+            row.style.display = fileMatches ? '' : 'none';
+            if (fileMatches) matchedAnyFile = true;
+        });
+
+        const folderMatches = !q || title.includes(q) || cust.includes(q) || inv.includes(q);
+
+        if (folderMatches || matchedAnyFile) {
+            card.style.display = '';
+            // If searched for a specific file, auto-expand the parent folder
+            if (q && matchedAnyFile) {
+                const content = card.querySelector('.folder-content');
+                if (content) content.style.display = 'block';
+            }
+        } else {
+            card.style.display = 'none';
+        }
+    });
+
+    // 2. Filter flat list
+    const flatRows = document.querySelectorAll('#flatTableBody tr.flat-doc-row');
+    flatRows.forEach(row => {
+        const fname = row.getAttribute('data-filename') || '';
+        const entity = row.getAttribute('data-entity') || '';
+        const customer = row.getAttribute('data-customer') || '';
+        const matches = !q || fname.includes(q) || entity.includes(q) || customer.includes(q);
+        row.style.display = matches ? '' : 'none';
+    });
+}
+
+function resetDocFilters() {
+    document.getElementById('docSearchInput').value = '';
+    filterExplorer();
+}
+
+function promptDeleteDoc(filepath, filename) {
+    document.getElementById('deleteDocFilePath').value = filepath;
+    document.getElementById('deleteDocFileNameDisplay').innerText = filename;
+    const modal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
+    modal.show();
+}
+
+function promptDeleteFolder(folderKey, folderTitle, fileCount) {
+    document.getElementById('deleteFolderKeyInput').value = folderKey;
+    document.getElementById('deleteFolderTitleDisplay').innerText = folderTitle;
+    document.getElementById('deleteFolderDetailsDisplay').innerText = `Folder: generated_docs/${folderKey}/ (${fileCount} document${fileCount === 1 ? '' : 's'})`;
+    const modal = new bootstrap.Modal(document.getElementById('deleteFolderModal'));
+    modal.show();
+}
+
+// =========================================================================
+// BACKUP & DRIVE SYNC
+// =========================================================================
+function openBackupModal() {
+    checkBackupDrives();
+    const modal = new bootstrap.Modal(document.getElementById('backupModal'));
+    modal.show();
+}
+
+function checkBackupDrives() {
+    const listEl = document.getElementById('backupDrivesList');
+    const targetInput = document.getElementById('backupTargetPathInput');
+    listEl.innerHTML = '<span class="text-muted small"><i class="bi bi-hourglass-split me-1"></i>Scanning drives...</span>';
+
+    fetch('/api/backup/status')
+        .then(r => r.json())
+        .then(data => {
+            if (data.drives && data.drives.length > 0) {
+                let html = '<div class="list-group list-group-flush">';
+                data.drives.forEach(d => {
+                    html += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-1 bg-transparent">
+                            <div>
+                                <span class="badge bg-dark me-2">${d.letter}:</span>
+                                <strong>${d.type}</strong>
+                                <span class="badge ${d.writable ? 'bg-success-subtle text-success border' : 'bg-danger-subtle text-danger border'} ms-1">
+                                    ${d.writable ? 'Ready & Writable' : 'Read-Only'}
+                                </span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="selectBackupTarget('${d.suggested_path}')">
+                                Use Drive
+                            </button>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                listEl.innerHTML = html;
+                if (!targetInput.value) {
+                    targetInput.value = data.drives[0].suggested_path;
+                }
+            } else {
+                listEl.innerHTML = `
+                    <div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>No external USB hard drive or removable storage detected.
+                        <div class="mt-1">Connect an external drive, or enter a local/network backup folder path below.</div>
+                    </div>
+                `;
+            }
+
+            if (data.last_backup) {
+                const lb = data.last_backup;
+                document.getElementById('lastBackupText').innerHTML = `
+                    Last backup: <strong>${lb.timestamp}</strong> (${lb.total_backup_size_mb} MB) to <code>${lb.target_directory}</code>
+                `;
+            }
+        })
+        .catch(err => {
+            listEl.innerHTML = '<span class="text-danger small">Error checking connected drives.</span>';
+        });
+}
+
+function selectBackupTarget(path) {
+    document.getElementById('backupTargetPathInput').value = path;
+}
+
+function runBackupSync() {
+    const targetPath = document.getElementById('backupTargetPathInput').value.trim();
+    const progressBlock = document.getElementById('backupProgressBlock');
+    const resultAlert = document.getElementById('backupResultAlert');
+    const startBtn = document.getElementById('startBackupBtn');
+
+    progressBlock.classList.remove('d-none');
+    resultAlert.classList.add('d-none');
+    startBtn.disabled = true;
+
+    fetch('/api/backup/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_path: targetPath })
+    })
+    .then(r => r.json())
+    .then(res => {
+        progressBlock.classList.add('d-none');
+        startBtn.disabled = false;
+        if (res.status === 'SUCCESS') {
+            resultAlert.className = 'alert alert-success mb-0';
+            resultAlert.innerHTML = `
+                <h6 class="fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Backup & Sync Complete!</h6>
+                <div class="small">
+                    <div><strong>Target:</strong> <code>${res.target_directory}</code></div>
+                    <div><strong>Archive Snapshot:</strong> <code>${res.archive_folder}</code></div>
+                    <div><strong>Size & Speed:</strong> ${res.total_backup_size_mb} MB written in ${res.duration_seconds}s</div>
+                    <div><strong>Documents Synced:</strong> ${res.documents_synced} files &bull; <strong>Templates:</strong> ${res.templates_synced} files</div>
+                    <div><strong>DB Tables Dumped:</strong> ${JSON.stringify(res.database_records)}</div>
+                </div>
+            `;
+            resultAlert.classList.remove('d-none');
+            checkBackupDrives();
+        } else {
+            resultAlert.className = 'alert alert-danger mb-0';
+            resultAlert.innerHTML = `<strong>Error during backup:</strong> ${res.error || 'Unknown error'}`;
+            resultAlert.classList.remove('d-none');
+        }
+    })
+    .catch(err => {
+        progressBlock.classList.add('d-none');
+        startBtn.disabled = false;
+        resultAlert.className = 'alert alert-danger mb-0';
+        resultAlert.innerHTML = `<strong>Network / Server error:</strong> ${err.message}`;
+        resultAlert.classList.remove('d-none');
+    });
+}
+
+// Auto-scroll highlighted file into view
+document.addEventListener('DOMContentLoaded', () => {
+    const highlightedRow = document.querySelector('.highlight-row');
+    if (highlightedRow) {
+        highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Ensure parent folder is open
+        const parentCard = highlightedRow.closest('.folder-card');
+        if (parentCard) {
+            const content = parentCard.querySelector('.folder-content');
+            if (content) content.style.display = 'block';
+        }
+    }
+});
+</script>
+</body>
+</html>

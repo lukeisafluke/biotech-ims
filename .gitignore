@@ -1,0 +1,25 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+
+# Environment and sensitive config
+.env
+.app_password
+
+# Generated customer files & backups (keep code repository clean)
+generated_docs/*
+!generated_docs/.gitkeep
+local_backups/
+*.bak
+backups/
+~$*
+.backup_history.json
+
+# OS specific files
+.DS_Store
+Thumbs.db
+

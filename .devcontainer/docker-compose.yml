@@ -1,0 +1,24 @@
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/python:3.11
+    volumes:
+      - ..:/workspaces/portfolio:cached
+    command: sleep infinity
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: devdb
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Mount SQL scripts into the Postgres init directory in order
+      - ../schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../backup_data.sql:/docker-entrypoint-initdb.d/02-backup_data.sql:ro
+
+volumes:
+  postgres-data:
