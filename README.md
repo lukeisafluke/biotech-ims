@@ -9,30 +9,30 @@ A production-ready, full-stack enterprise web application for inventory control,
 
 ---
 
-## 🌟 Highlights & Core Capabilities
+## Highlights & Core Capabilities
 
-- **📋 Complete Quote-to-Order Lifecycle**:
+- **Complete Quote-to-Order Lifecycle**:
   - Multi-item quotation builder with automated CAD tax, discount, and shipping calculators.
   - Seamless one-click conversion from approved Quote to confirmed Order.
   - Dynamic payment tracking (Paid / Unpaid) and fulfillment pipeline (Pending / Fulfilled).
   - Revision history and version tracking for quotes and customer references.
 
-- **🏭 Warehouse & Lot Management (FEFO)**:
+- **Warehouse & Lot Management (FEFO)**:
   - Base SKU grouping with support for variable package sizes and sub-SKUs.
   - **FEFO (First-Expired, First-Out)** lot tracking with automated shelf-life warnings.
   - Real-time distinction between physical on-hand inventory, reserved stock, and net available stock.
   - Automated shortage detection highlighting order fulfillment risks.
 
-- **📄 Automated Excel Document Generation**:
+- **Automated Excel Document Generation**:
   - Dynamically populates professional office templates for **Invoices**, **Packing Slips**, **Quotes**, and **Shipping Labels**.
   - Intelligent coordinate mapping preserving formulas, cell borders, and merged header structures.
   - On-demand browser viewing and direct download.
 
-- **📥 Product Catalog Synchronization**:
+- **Product Catalog Synchronization**:
   - Automated parser for supplier Excel spreadsheets (`.xlsx`).
   - High-throughput diffing: inserts new SKUs, updates modified pricing/names, and skips unchanged records without locking the database.
 
-- **💾 Enterprise Backup & External Drive Sync**:
+- **Enterprise Backup & External Drive Sync**:
   - Standalone multi-target backup engine.
   - Dumps consistent relational PostgreSQL schema and datasets into versioned SQL scripts.
   - Incremental document synchronization with external hard drive / USB auto-detection.
@@ -40,7 +40,7 @@ A production-ready, full-stack enterprise web application for inventory control,
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 ```mermaid
 graph TD
@@ -62,7 +62,7 @@ graph TD
 
 ---
 
-## 🚀 Quickstart Guide
+## Quickstart Guide
 
 ### Option 1: Docker Compose / DevContainer (Recommended)
 
@@ -132,7 +132,7 @@ Visit `http://localhost:5000` in your web browser.
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```text
 portfolio/
@@ -166,7 +166,7 @@ portfolio/
 
 ---
 
-## ⚙️ Configuration Reference
+## Configuration Reference
 
 | Environment Variable | Description | Default |
 | :--- | :--- | :--- |
@@ -181,7 +181,7 @@ portfolio/
 
 ---
 
-## 🛡️ Standalone Utilities
+## Standalone Utilities
 
 ### 1. Catalog Import CLI
 Import or update inventory items directly from an Excel sheet:
@@ -207,6 +207,6 @@ python export_db.py backup_data.sql
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
